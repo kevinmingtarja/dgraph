@@ -37,8 +37,8 @@ jobs:
       - run: |
           curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/requirements.txt
           pip install -r requirements.txt
-          curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
-          curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
           export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
           export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
 
