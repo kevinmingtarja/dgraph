@@ -19,7 +19,7 @@ env:
   EC2_SECURITY_GROUP: alll
   EC2_KEY_NAME: dgraph-personal
   EC2_INSTANCE_TYPE: t2.micro
-  GITHUB_TOKEN: ${{ secrets.GH_TOK }}
+  GH_TOKEN: ${{ secrets.GH_TOK }}
 
 jobs:
   scale-up:
