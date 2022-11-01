@@ -11,6 +11,15 @@ on:
       - ready_for_review
     branches:
       - main
+env:
+  MIN_RUNNERS: 2
+  MAX_RUNNERS: 4
+  LINUX_AMI_ID: ami-00987499fb6969c21
+  IAM_INSTANCE_PROFILE_ARN: arn:aws:iam::069684981279:instance-profile/gh-runner-autoscaler
+  EC2_SECURITY_GROUP: alll
+  EC2_KEY_NAME: dgraph-personal
+  EC2_INSTANCE_TYPE: t2.micro
+
 jobs:
   scale-up:
     runs-on: ubuntu-latest
@@ -25,6 +34,8 @@ jobs:
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
           ls
+          GITHUB_REPO_OWNER=${{ github.repository_owner }} | cut -d "/" -f 1
+          GITHUB_REPO=${{ github.repository }} | cut -d "/" -f 2
           python3 scale.py up
 
   dgraph-tests:
