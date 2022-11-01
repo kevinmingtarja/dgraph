@@ -39,7 +39,7 @@ jobs:
           pip install -r requirements.txt
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
-          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN=$TOK
           GITHUB_REPO_OWNER=${{ github.repository_owner }} | cut -d "/" -f 1
           GITHUB_REPO=${{ github.repository }} | cut -d "/" -f 2
 
