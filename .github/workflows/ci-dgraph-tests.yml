@@ -20,6 +20,7 @@ env:
   EC2_KEY_NAME: dgraph-personal
   EC2_INSTANCE_TYPE: t2.micro
   GH_TOKEN: ${{ secrets.GH_TOK }}
+  TEST: $(echo ${{ github.repository }} | cut -d "/" -f 1)
 
 jobs:
   scale-up:
@@ -40,9 +41,12 @@ jobs:
           pip install -r requirements.txt
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
+          echo $TEST
+          export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
+          export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
 
-          GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
-          GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
+          echo $GITHUB_REPO_OWNER
+          echo $GITHUB_REPO
 
           python3 scale.py up
 
