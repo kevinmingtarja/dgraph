@@ -41,10 +41,8 @@ jobs:
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
           curl -H "Authorization: token ${TOK}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
 
-          REPO=${{ github.repository }}
-          echo $REPO
-          export GITHUB_REPO_OWNER=echo $REPO | cut -d "/" -f 1
-          export GITHUB_REPO=echo $REPO | cut -d "/" -f 2
+          GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
+          GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
 
           echo $GITHUB_REPO_OWNER
           echo $GITHUB_REPO
