@@ -44,6 +44,9 @@ jobs:
           GITHUB_REPO_OWNER=${{ github.repository_owner }} | cut -d "/" -f 1
           GITHUB_REPO=${{ github.repository }} | cut -d "/" -f 2
 
+          echo $GITHUB_REPO_OWNER
+          echo $GITHUB_REPO
+
           python3 scale.py up
 
   dgraph-tests:
