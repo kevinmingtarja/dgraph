@@ -18,7 +18,7 @@ env:
   IAM_INSTANCE_PROFILE_ARN: arn:aws:iam::069684981279:instance-profile/gh-runner-autoscaler
   EC2_SECURITY_GROUP: alll
   EC2_KEY_NAME: dgraph-personal
-  EC2_INSTANCE_TYPE: t2.micro
+  EC2_INSTANCE_TYPE: t2.medium
   GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
     outputs:
-      runner_name: ${{ runner.name }}
+      runner_name: ${{ steps.out.outputs.runner_name }}
     steps:
       - id: out
         run: echo "runner_name=${{ runner.name }}" >> $GITHUB_OUTPUT
