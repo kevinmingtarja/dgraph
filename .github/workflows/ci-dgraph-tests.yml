@@ -48,12 +48,13 @@ jobs:
 
   dgraph-tests:
     needs: scale-up
-    id: dgraph-tests
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
     outputs:
-      runner-name: ${{ runner.name }} # if doesnt work, follow https://docs.github.com/en/actions/using-jobs/defining-outputs-for-jobs#example-defining-outputs-for-a-job
+      runner_name: ${{ runner.name }}
     steps:
+      - id: out
+        run: echo "runner_name=${{ runner.name }}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -124,7 +125,7 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
       - run: pip install -r requirements.txt
-      - run: echo ${{ needs.dgraph-tests.outputs.runner-name }}
+      - run: echo ${{ needs.dgraph-tests.outputs.runner_name }}
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -137,4 +138,4 @@ jobs:
           export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
           export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
 
-          python3 scale.py down ${{ needs.dgraph-tests.outputs.runner-name }}
+          python3 scale.py down ${{ needs.dgraph-tests.outputs.runner_name }}
