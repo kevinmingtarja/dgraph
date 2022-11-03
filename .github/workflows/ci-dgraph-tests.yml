@@ -54,10 +54,10 @@ jobs:
     steps:
       - id: out
         run: |
-        echo ${{ runner.name }}
-        RUNNER_NAME=${{ runner.name }}
-        echo $RUNNER_NAME
-        echo "runner_name=${RUNNER_NAME}" >> $GITHUB_OUTPUT
+          echo ${{ runner.name }}
+          RUNNER_NAME=${{ runner.name }}
+          echo $RUNNER_NAME
+          echo "runner_name=${RUNNER_NAME}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
