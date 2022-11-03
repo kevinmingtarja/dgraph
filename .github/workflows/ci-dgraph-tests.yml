@@ -28,6 +28,10 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+          cache: 'pip'
+      - run: |
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/requirements.txt
+          pip install -r requirements.txt
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -35,15 +39,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - run: |
-          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/requirements.txt
-          pip install -r requirements.txt
           curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
           curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
           export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
           export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
-
-          echo $GITHUB_REPO_OWNER
-          echo $GITHUB_REPO
 
           python3 scale.py up
 
@@ -51,6 +50,8 @@ jobs:
     needs: scale-up
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
+    outputs:
+      runner-name: ${{ runner.name }} # if doesnt work, follow https://docs.github.com/en/actions/using-jobs/defining-outputs-for-jobs#example-defining-outputs-for-a-job
     steps:
       - uses: actions/checkout@v3
       - name: Set up Go
@@ -109,3 +110,30 @@ jobs:
         run: go install github.com/mattn/goveralls@latest
       - name: Send Coverage Results
         run: cd t && goveralls -repotoken ${{ secrets.COVERALLSIO_TOKEN }} -coverprofile=coverage.out
+
+  scale-down:
+    needs: dgraph-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      - run: |
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/requirements.txt
+          pip install -r requirements.txt
+      - run: echo ${{ needs.dgraph-tests.outputs.runner-name }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - run: |
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
+          export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
+          export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
+
+          python3 scale.py down ${{ needs.dgraph-tests.outputs.runner-name }}
