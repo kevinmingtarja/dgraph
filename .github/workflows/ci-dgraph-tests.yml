@@ -15,6 +15,7 @@ on:
     - cron: "0 * * * *"
 env:
   MAX_RUNNERS: 4
+  RUNNER_NAME_FILE: runner.txt
   LINUX_AMI_ID: ami-00987499fb6969c21
   IAM_INSTANCE_PROFILE_ARN: arn:aws:iam::069684981279:instance-profile/gh-runner-autoscaler
   EC2_SECURITY_GROUP: alll
@@ -25,6 +26,8 @@ env:
 jobs:
   scale-up:
     runs-on: ubuntu-latest
+    outputs:
+      runner_name: ${{ steps.scale_up.outputs.runner_name }}
     steps:
       - name: Download requirements.txt
         run: |
@@ -41,27 +44,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Run scale up command
+        id: scale_up
         run: |
           curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
           curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
           export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
           export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
 
+          #This will output the runner name to $RUNNER_NAME_FILE
           python3 scale.py up
+
+          echo "runner_name=$(cat $RUNNER_NAME_FILE)" >> $GITHUB_OUTPUT
 
   dgraph-tests:
     needs: scale-up
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
-    outputs:
-      runner_name: ${{ steps.out.outputs.runner_name }}
     steps:
-      - id: out
-        run: |
-          echo ${{ runner.name }}
-          RUNNER_NAME=${{ runner.name }}
-          echo $RUNNER_NAME
-          echo "runner_name=${RUNNER_NAME}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -121,7 +120,7 @@ jobs:
 #        run: cd t && goveralls -repotoken ${{ secrets.COVERALLSIO_TOKEN }} -coverprofile=coverage.out
 
   scale-down:
-    needs: dgraph-tests
+    needs: [scale-up, dgraph-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -146,4 +145,4 @@ jobs:
           export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
           export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
 
-          python3 scale.py down ${{ needs.dgraph-tests.outputs.runner_name }}
+          python3 scale.py down ${{ needs.scale-up.outputs.runner_name }}
