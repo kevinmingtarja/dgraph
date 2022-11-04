@@ -11,8 +11,8 @@ on:
       - ready_for_review
     branches:
       - main
-  schedule:
-    - cron: "0 * * * *"
+#  schedule:
+#    - cron: "0 * * * *"
 env:
   MAX_RUNNERS: 4
   RUNNER_NAME_FILE: runner.txt
