@@ -11,65 +11,137 @@ on:
       - ready_for_review
     branches:
       - main
+env:
+  MAX_RUNNERS: 4
+  LINUX_AMI_ID: ami-00987499fb6969c21
+  IAM_INSTANCE_PROFILE_ARN: arn:aws:iam::069684981279:instance-profile/gh-runner-autoscaler
+  EC2_SECURITY_GROUP: alll
+  EC2_KEY_NAME: dgraph-personal
+  EC2_INSTANCE_TYPE: t2.medium
+  GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
 jobs:
+  scale-up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download requirements.txt
+        run: |
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/requirements.txt
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Run scale up command
+        run: |
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
+          export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
+          export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
+
+          python3 scale.py up
+
   dgraph-tests:
+    needs: scale-up
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
+    outputs:
+      runner_name: ${{ steps.out.outputs.runner_name }}
     steps:
+      - id: out
+        run: |
+          echo ${{ runner.name }}
+          RUNNER_NAME=${{ runner.name }}
+          echo $RUNNER_NAME
+          echo "runner_name=${RUNNER_NAME}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
-      - name: Set up Node
-        uses: actions/setup-node@v3
+#      - name: Set up Node
+#        uses: actions/setup-node@v3
+#        with:
+#          node-version: 16
+#      - name: Install protobuf-compiler
+#        run: sudo apt-get install -y protobuf-compiler
+#      - name: Check protobuf
+#        run: |
+#          cd ./protos
+#          go mod tidy
+#          make regenerate
+#          git diff --exit-code -- .
+#      - name: Make Docker Image
+#        run: make image-local
+#      - name: Make Linux Build
+#        run: |
+#          #!/bin/bash
+#          # go settings
+#          export GOOS=linux
+#          export GOARCH=amd64
+#          # make dgraph binary
+#          make dgraph
+#      - name: Clean Up Environment
+#        run: |
+#          #!/bin/bash
+#          # clean cache
+#          go clean -testcache
+#          # build the test binary
+#          cd t; go build .
+#          # clean up docker containers before test execution
+#          ./t -r
+#      - name: Run Unit Tests
+#        run: |
+#          #!/bin/bash
+#          # clean cache
+#          go clean -testcache
+#          # go env settings
+#          export GOPATH=~/go
+#          # move the binary
+#          cp dgraph/dgraph ~/go/bin
+#          # build the test binary
+#          cd t; go build .
+#          # run the tests
+#          ./t --coverage=true --pkg=tok
+#          # clean up docker containers after test execution
+#          ./t -r
+#          # sleep
+#          sleep 5
+#      - name: Install Goveralls
+#        run: go install github.com/mattn/goveralls@latest
+#      - name: Send Coverage Results
+#        run: cd t && goveralls -repotoken ${{ secrets.COVERALLSIO_TOKEN }} -coverprofile=coverage.out
+
+  scale-down:
+    needs: dgraph-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download requirements.txt
+        run: |
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/requirements.txt
+      - uses: actions/setup-python@v4
         with:
-          node-version: 16
-      - name: Install protobuf-compiler
-        run: sudo apt-get install -y protobuf-compiler
-      - name: Check protobuf
+          python-version: '3.10'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Run scale down command
         run: |
-          cd ./protos
-          go mod tidy
-          make regenerate
-          git diff --exit-code -- .
-      - name: Make Docker Image
-        run: make image-local
-      - name: Make Linux Build
-        run: |
-          #!/bin/bash
-          # go settings
-          export GOOS=linux
-          export GOARCH=amd64
-          # make dgraph binary
-          make dgraph
-      - name: Clean Up Environment
-        run: |
-          #!/bin/bash
-          # clean cache
-          go clean -testcache
-          # build the test binary
-          cd t; go build .
-          # clean up docker containers before test execution
-          ./t -r
-      - name: Run Unit Tests
-        run: |
-          #!/bin/bash
-          # clean cache
-          go clean -testcache
-          # go env settings
-          export GOPATH=~/go
-          # move the binary
-          cp dgraph/dgraph ~/go/bin 
-          # build the test binary
-          cd t; go build .
-          # run the tests
-          ./t --coverage=true
-          # clean up docker containers after test execution
-          ./t -r
-          # sleep
-          sleep 5
-      - name: Install Goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send Coverage Results
-        run: cd t && goveralls -repotoken ${{ secrets.COVERALLSIO_TOKEN }} -coverprofile=coverage.out
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/autoscaler.py
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" -O -L https://api.github.com/repos/dgraph-io/gh-runner-autoscaling/contents/scale.py
+          export GITHUB_REPO_OWNER=$(echo ${{ github.repository }} | cut -d "/" -f 1)
+          export GITHUB_REPO=$(echo ${{ github.repository }} | cut -d "/" -f 2)
+
+          python3 scale.py down ${{ needs.dgraph-tests.outputs.runner_name }}
